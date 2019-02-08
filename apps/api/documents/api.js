@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Ascensio System SIA 2013. All rights reserved
+ * Copyright (c) AO "NOVYE KOMMUNIKACIONNYE TEHNOLOGII" 2018. All rights reserved
  *
- * http://www.onlyoffice.com
+ * http://r7-office.ru
  */
 
 ;(function(DocsAPI, window, document, undefined) {
@@ -45,6 +45,8 @@
                     changeHistory: <can change history>, // default = false
                     comment: <can comment in view mode> // default = edit,
                     modifyFilter: <can add, remove and save filter in the spreadsheet> // default = true
+                    modifyContentControl: <can modify content controls in documenteditor> // default = true
+                   fillForms:  <can edit forms in view mode> // default = edit || review
                 }
             },
             editorConfig: {
@@ -119,7 +121,8 @@
                     autosave: true,
                     forcesave: false,
                     commentAuthorOnly: false,
-                    showReviewChanges: false
+                    showReviewChanges: false,
+                    help: true
                 },
                 plugins: {
                     autostart: ['asc.{FFE1F462-1EA2-4391-990D-4CC84940B754}'],
@@ -191,6 +194,7 @@
         _config.editorConfig.canSendEmailAddresses = _config.events && !!_config.events.onRequestEmailAddresses;
         _config.editorConfig.canRequestEditRights = _config.events && !!_config.events.onRequestEditRights;
         _config.editorConfig.canRequestClose = _config.events && !!_config.events.onRequestClose;
+        _config.editorConfig.canRename = _config.events && !!_config.events.onRequestRename;
         _config.frameEditorId = placeholderId;
 
         _config.events && !!_config.events.onReady && console.log("Obsolete: The onReady event is deprecated. Please use onAppReady instead.");
@@ -566,11 +570,14 @@
         width: '100%',
         height: '100%',
         editorConfig: {
-            lang: 'en',
+            lang: 'ru',
             canCoAuthoring: true,
             customization: {
                 about: true,
-                feedback: false
+                feedback: false,
+                logo: {
+                    url: "http://r7-office.ru"
+                }
             }
         }
     };
@@ -688,7 +695,7 @@
             if ( (typeof(config.editorConfig.customization) == 'object') && config.editorConfig.customization.loaderName) {
                 if (config.editorConfig.customization.loaderName !== 'none') params += "&customer=" + config.editorConfig.customization.loaderName;
             } else
-                params += "&customer=ONLYOFFICE";
+                params += "&customer=Р7-Офис";
             if ( (typeof(config.editorConfig.customization) == 'object') && config.editorConfig.customization.loaderLogo) {
                 if (config.editorConfig.customization.loaderLogo !== '') params += "&logo=" + config.editorConfig.customization.loaderLogo;
             }

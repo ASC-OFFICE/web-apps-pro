@@ -76,7 +76,7 @@ define([
                     var config = this.mode.customization;
                     config && !!config.feedback && !!config.feedback.url ?
                         window.open(config.feedback.url) :
-                        window.open('http://support.onlyoffice.com');
+                        window.open('http://helpcenter.r7-office.ru');
                 }
             }
         },
@@ -164,7 +164,7 @@ define([
 
             this.menuFile = new PE.Views.FileMenu({});
             this.menuFile.render();
-            this.btnAbout.panel = (new Common.Views.About({el: $('#about-menu-panel'), appName: 'Presentation Editor'})).render();
+            this.btnAbout.panel = (new Common.Views.About({el: $('#about-menu-panel'), appName: 'Редактор презентаций'})).render();
 
             return this;
         },
@@ -179,7 +179,7 @@ define([
             } else {
                 btn.panel['hide']();
             }
-            if (this.mode.isEdit) PE.getController('Toolbar').DisableToolbar(state==true);
+            PE.getController('Toolbar').DisableToolbar(state==true);
             Common.NotificationCenter.trigger('layout:changed', 'leftmenu');
         },
 
