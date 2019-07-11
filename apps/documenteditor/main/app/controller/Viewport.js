@@ -163,7 +163,7 @@ define([
             }
 
             if ( config.customization ) {
-                if ( config.customization.toolbarBreakTabs )
+                if ( config.customization.toolbarNoTabs )
                     me.viewport.vlayout.getItem('toolbar').el.addClass('style-off-tabs');
 
                 if ( config.customization.toolbarHideFileName )
@@ -212,7 +212,7 @@ define([
                 if (!config.isEdit) {
                     me.header.mnuitemCompactToolbar.hide();
                     Common.NotificationCenter.on('tab:visible', _.bind(function(action, visible){
-                        if (action=='plugins' && visible) {
+                        if ((action=='plugins' || action=='review') && visible) {
                             me.header.mnuitemCompactToolbar.show();
                         }
                     }, this));

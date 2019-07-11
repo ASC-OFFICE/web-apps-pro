@@ -276,6 +276,8 @@ define([
                 this.labelSum = $('#status-math-sum', this.boxMath);
                 this.labelCount = $('#status-math-count', this.boxMath);
                 this.labelAverage = $('#status-math-average', this.boxMath);
+                this.labelMin = $('#status-math-min', this.boxMath);
+                this.labelMax = $('#status-math-max', this.boxMath);
                 this.boxMath.hide();
 
                 this.boxFiltered = $('#status-filtered-box', this.el);
@@ -366,6 +368,8 @@ define([
                 if (info.count>1) {
                     if (!this.boxMath.is(':visible')) this.boxMath.show();
                     this.labelCount.text(this.textCount + ': ' + info.count);
+                    this.labelMin.text((info.min && info.min.length) ? (this.textMin + ': ' + info.min) : '');
+                    this.labelMax.text((info.max && info.max.length) ? (this.textMax + ': ' + info.max) : '');
                     this.labelSum.text((info.sum && info.sum.length) ? (this.textSum + ': ' + info.sum) : '');
                     this.labelAverage.text((info.average && info.average.length) ? (this.textAverage + ': ' + info.average) : '');
                 } else {
@@ -544,6 +548,8 @@ define([
             textSum             : 'SUM',
             textCount           : 'COUNT',
             textAverage         : 'AVERAGE',
+            textMin             : 'MIN',
+            textMax             : 'MAX',
             filteredRecordsText : '{0} of {1} records filtered',
             filteredText        : 'Filter mode'
         }, SSE.Views.Statusbar || {}));
@@ -585,7 +591,7 @@ define([
                 this.txtName = new Common.UI.InputField({
                     el: $window.find('#txt-sheet-name'),
                     style: 'width:100%;',
-                    value: this.options.current,
+                    value: Common.Utils.String.htmlEncode(this.options.current),
                     allowBlank: false,
                     maxLength: 31,
                     validation: _.bind(this.nameValidator, this)

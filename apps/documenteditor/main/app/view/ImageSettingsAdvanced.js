@@ -136,6 +136,7 @@ define([    'text!documenteditor/main/app/template/ImageSettingsAdvanced.templat
                 if (this._changedProps) {
                     this._changedProps.put_Width(Common.Utils.Metric.fnRecalcToMM(field.getNumberValue()));
                     this._changedProps.put_Height(Common.Utils.Metric.fnRecalcToMM(this.spnHeight.getNumberValue()));
+                    this._changedProps.put_ResetCrop(false);
                 }
             }, this));
             this.spinners.push(this.spnWidth);
@@ -163,6 +164,7 @@ define([    'text!documenteditor/main/app/template/ImageSettingsAdvanced.templat
                 if (this._changedProps) {
                     this._changedProps.put_Height(Common.Utils.Metric.fnRecalcToMM(field.getNumberValue()));
                     this._changedProps.put_Width(Common.Utils.Metric.fnRecalcToMM(this.spnWidth.getNumberValue()));
+                    this._changedProps.put_ResetCrop(false);
                 }
             }, this));
             this.spinners.push(this.spnHeight);
@@ -177,6 +179,7 @@ define([    'text!documenteditor/main/app/template/ImageSettingsAdvanced.templat
                 if (this._changedProps) {
                     this._changedProps.put_Height(Common.Utils.Metric.fnRecalcToMM(this.spnHeight.getNumberValue()));
                     this._changedProps.put_Width(Common.Utils.Metric.fnRecalcToMM(this.spnWidth.getNumberValue()));
+                    this._changedProps.put_ResetCrop(true);
                 }
             }, this));
 
@@ -994,6 +997,7 @@ define([    'text!documenteditor/main/app/template/ImageSettingsAdvanced.templat
             });
             this.btnBeginStyleMenu = (new Common.UI.Menu({
                 style: 'min-width: 105px;',
+                additionalAlign: this.menuAddAlign,
                 items: [
                     { template: _.template('<div id="shape-advanced-menu-begin-style" style="width: 105px; margin: 0 5px;"></div>') }
                 ]
@@ -1020,6 +1024,7 @@ define([    'text!documenteditor/main/app/template/ImageSettingsAdvanced.templat
             });
             this.btnBeginSizeMenu = (new Common.UI.Menu({
                 style: 'min-width: 160px;',
+                additionalAlign: this.menuAddAlign,
                 items: [
                     { template: _.template('<div id="shape-advanced-menu-begin-size" style="width: 160px; margin: 0 5px;"></div>') }
                 ]
@@ -1052,6 +1057,7 @@ define([    'text!documenteditor/main/app/template/ImageSettingsAdvanced.templat
             });
             this.btnEndStyleMenu = (new Common.UI.Menu({
                 style: 'min-width: 105px;',
+                additionalAlign: this.menuAddAlign,
                 items: [
                     { template: _.template('<div id="shape-advanced-menu-end-style" style="width: 105px; margin: 0 5px;"></div>') }
                 ]
@@ -1078,6 +1084,7 @@ define([    'text!documenteditor/main/app/template/ImageSettingsAdvanced.templat
             });
             this.btnEndSizeMenu = (new Common.UI.Menu({
                 style: 'min-width: 160px;',
+                additionalAlign: this.menuAddAlign,
                 items: [
                     { template: _.template('<div id="shape-advanced-menu-end-size" style="width: 160px; margin: 0 5px;"></div>') }
                 ]

@@ -57,6 +57,20 @@
                                 </div>
                             </div>
                         </li>
+                        <% if (orthography) { %>
+                        <li>
+                            <a id="settings-orthography" class="item-link no-indicator">
+                                <div class="item-content">
+                                    <div class="item-media">
+                                        <i class="icon icon-spellcheck"></i>
+                                    </div>
+                                    <div class="item-inner">
+                                        <div class="item-title">Проверка правописания</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        <% } %>
                         <li>
                             <div id="settings-review" class="item-content">
                                 <div class="item-media">
@@ -580,8 +594,8 @@
                 <div class="content-block" id="settings-about-licensor" style="display: none;">
                     <div class="content-block-inner" style="padding-top:0; padding-bottom: 1px;"/>
                     <p><label><%= scope.textPoweredBy %></label></p>
-                    <h3 class="vendor">Ascensio System SIA</h3>
-                    <p><a class="external" target="_blank" href="http://www.onlyoffice.com">www.onlyoffice.com</a></p>
+                    <h3 class="vendor">АО "Новые коммуникационные технологии"</h3>
+                    <p><a class="external" target="_blank" href="http://www.r7-office.ru">r7-office.ru</a></p>
                 </div>
             </div>
         </div>

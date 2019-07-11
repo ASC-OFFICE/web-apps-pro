@@ -299,6 +299,7 @@ define([
                             var model = this.popoverComments.findWhere({uid: id});
                             if (model && !this.getPopover().isVisible()) {
                                 this.getPopover().showComments(true);
+                                this.api.asc_selectComment(id);
                                 return;
                             }
                         }
@@ -777,7 +778,6 @@ define([
                     }));
                 }
 
-                replies.sort(function (a,b) { return a.get('time') - b.get('time');});
                 comment.set('replys', replies);
 
                 if (!silentUpdate) {
@@ -1246,10 +1246,6 @@ define([
                         editable            : this.mode.canEditComments || (data.asc_getReply(i).asc_getUserId() == this.currentUserId)
                     }));
                 }
-
-                replies.sort(function (a, b) {
-                    return a.get('time') - b.get('time');
-                });
             }
 
             return replies;
@@ -1304,8 +1300,8 @@ define([
                         dialog.hide();
                     }
 
-                    dialog.handlerHide = (function () {
-                        me.clearDummyComment();
+                    dialog.handlerHide = (function (clear) {
+                        me.clearDummyComment(clear);
                     });
 
                     anchor = this.api.asc_getAnchorPosition();
@@ -1314,7 +1310,8 @@ define([
                             anchor.asc_getY(),
                             this.hintmode ? anchor.asc_getX() : undefined);
 
-                        dialog.showComments(true, false, true);
+                        Common.NotificationCenter.trigger('comments:showdummy');
+                        dialog.showComments(true, false, true, dialog.getDummyText());
                     }
                 }
             }
@@ -1328,12 +1325,14 @@ define([
                     this.hidereply          = false;
                     this.isSelectedComment  = false;
                     this.uids               = [];
-                    this.isDummyComment     = false;
 
                     this.popoverComments.reset();
                     if (this.getPopover().isVisible()) {
                        this.getPopover().hideComments();
                     }
+
+                    this.isDummyComment     = false;
+
                     comment.asc_putText(commentVal);
                     comment.asc_putTime(this.utcDateToString(new Date()));
                     comment.asc_putOnlyOfficeTime(this.ooDateToString(new Date()));
@@ -1353,7 +1352,7 @@ define([
                 }
             }
         },
-        clearDummyComment: function () {
+        clearDummyComment: function (clear) {
             if (this.isDummyComment) {
                 this.isDummyComment     = false;
 
@@ -1365,6 +1364,9 @@ define([
 
                 var dialog = this.getPopover();
                 if (dialog) {
+                    clear && dialog.clearDummyText();
+                    dialog.saveDummyText();
+
                     dialog.handlerHide = (function () {
                     });
 
@@ -1378,6 +1380,8 @@ define([
                 if (!_.isUndefined(this.api.asc_SetDocumentPlaceChangedEnabled)) {
                     this.api.asc_SetDocumentPlaceChangedEnabled(false);
                 }
+
+                Common.NotificationCenter.trigger('comments:cleardummy');
             }
         },
 

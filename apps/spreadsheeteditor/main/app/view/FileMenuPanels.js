@@ -675,6 +675,7 @@ define([
                     { value: 'de', displayValue: this.txtDe, exampleValue: this.txtExampleDe },
                     { value: 'es', displayValue: this.txtEs, exampleValue: this.txtExampleEs },
                     { value: 'fr', displayValue: this.txtFr, exampleValue: this.txtExampleFr },
+                    { value: 'it', displayValue: this.txtIt, exampleValue: this.txtExampleIt },
                     { value: 'ru', displayValue: this.txtRu, exampleValue: this.txtExampleRu },
                     { value: 'pl', displayValue: this.txtPl, exampleValue: this.txtExamplePl }
                 ]
@@ -884,12 +885,14 @@ define([
         txtPl: 'Polish',
         txtEs: 'Spanish',
         txtFr: 'French',
+        txtIt: 'Italian',
         txtExampleEn: ' SUM; MIN; MAX; COUNT',
         txtExampleDe: ' SUMME; MIN; MAX; ANZAHL',
         txtExampleRu: ' СУММ; МИН; МАКС; СЧЁТ',
         txtExamplePl: ' SUMA; MIN; MAX; ILE.LICZB',
         txtExampleEs: ' SUMA; MIN; MAX; CALCULAR',
         txtExampleFr: ' SOMME; MIN; MAX; NB',
+        txtExampleIt: ' SOMMA; MIN; MAX; CONTA.NUMERI',
         strFuncLocale: 'Formula Language',
         strFuncLocaleEx: 'Example: SUM; MIN; MAX; COUNT',
         strRegSettings: 'Regional Settings',
@@ -1214,6 +1217,7 @@ define([
             }
 
             Common.NotificationCenter.on('collaboration:sharing', _.bind(this.changeAccessRights, this));
+            Common.NotificationCenter.on('collaboration:sharingdeny', _.bind(this.onLostEditRights, this));
 
             return this;
         },
