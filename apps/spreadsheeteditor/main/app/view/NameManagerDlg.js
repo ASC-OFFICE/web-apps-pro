@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2018
+ * (c) Copyright Ascensio System SIA 2010-2019
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,8 +13,8 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at Lubanas st. 125a-25, Riga, Latvia,
- * EU, LV-1021.
+ * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
  * of the Program must display Appropriate Legal Notices, as required under
@@ -190,7 +190,7 @@ define([  'text!spreadsheeteditor/main/app/template/NameManagerDlg.template',
                     var scope = this.ranges[i].asc_getScope(),
                         id = this.ranges[i].asc_getIsLock();
                     arr.push({
-                        name: this.ranges[i].asc_getName(),
+                        name: this.ranges[i].asc_getName(true),
                         scope: scope,
                         scopeName: (scope===null) ? this.textWorkbook: this.sheetNames[scope],
                         range: this.ranges[i].asc_getRef(),
@@ -233,7 +233,7 @@ define([  'text!spreadsheeteditor/main/app/template/NameManagerDlg.template',
                     }, 50);
 
                 } else if (selectedItem){ // object
-                    var rec = store.findWhere({name: selectedItem.asc_getName(), scope: selectedItem.asc_getScope()});
+                    var rec = store.findWhere({name: selectedItem.asc_getName(true), scope: selectedItem.asc_getScope()});
                     if (rec) {
                         this.rangeList.selectRecord(rec);
                         setTimeout(function() {
@@ -285,7 +285,7 @@ define([  'text!spreadsheeteditor/main/app/template/NameManagerDlg.template',
                 xy = me.$window.offset(),
                 rec = this.rangeList.getSelectedRec(),
                 idx = _.indexOf(this.rangeList.store.models, rec[0]),
-                oldname = (isEdit && rec.length>0) ? new Asc.asc_CDefName(rec[0].get('name'), rec[0].get('range'), rec[0].get('scope'), rec[0].get('isTable')) : null;
+                oldname = (isEdit && rec.length>0) ? new Asc.asc_CDefName(rec[0].get('name'), rec[0].get('range'), rec[0].get('scope'), rec[0].get('isTable'), undefined, undefined, undefined, true) : null;
 
             var win = new SSE.Views.NamedRangeEditDlg({
                 api: me.api,
@@ -319,7 +319,7 @@ define([  'text!spreadsheeteditor/main/app/template/NameManagerDlg.template',
             var rec = this.rangeList.getSelectedRec();
             if (rec.length>0) {
                 this.currentNamedRange = _.indexOf(this.rangeList.store.models, rec[0]);
-                this.api.asc_delDefinedNames(new Asc.asc_CDefName(rec[0].get('name'), rec[0].get('range'), rec[0].get('scope'), rec[0].get('isTable')));
+                this.api.asc_delDefinedNames(new Asc.asc_CDefName(rec[0].get('name'), rec[0].get('range'), rec[0].get('scope'), rec[0].get('isTable'), undefined, undefined, undefined, true));
             }
         },
 

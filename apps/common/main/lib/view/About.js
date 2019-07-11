@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2018
+ * (c) Copyright Ascensio System SIA 2010-2019
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,8 +13,8 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at Lubanas st. 125a-25, Riga, Latvia,
- * EU, LV-1021.
+ * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
  * of the Program must display Appropriate Legal Notices, as required under
@@ -53,15 +53,11 @@ define([
             Common.UI.BaseView.prototype.initialize.call(this,arguments);
 
             this.txtVersionNum = '{{PRODUCT_VERSION}}';
-            this.txtAscMail = 'support@r7-office.ru';
-            this.txtAscTelNum = '+7 831 422 48 30';
-            this.txtAscUrl = 'r7-office.ru';
-            this.txtAscName = 'АО "Новые коммуникационные технологии"';
 
             this.template = _.template([
                 '<table id="id-about-licensor-logo" cols="1" style="width: 100%; margin-top: 20px;">',
                     '<tr>',
-                        '<td align="center"><div><img class="asc-about-office"></div></td>',
+                        '<td align="center"><div class="asc-about-office"></div></td>',
                     '</tr>',
                     '<tr>',
                         '<td align="center"><label class="asc-about-version">' + options.appName.toUpperCase() + '</label></td>',
@@ -72,29 +68,29 @@ define([
                 '</table>',
                 '<table id="id-about-licensor-info" cols="3" style="width: 100%;" class="margin-bottom">',
                     '<tr>',
-                        '<td colspan="3" align="center" style="padding: 20px 0 10px 0;"><label class="asc-about-companyname">' + this.txtAscName + '</label></td>',
+                        '<td colspan="3" align="center" style="padding: 20px 0 10px 0;"><label class="asc-about-companyname"><%= publishername %></label></td>',
                     '</tr>',
                     '<tr>',
                         '<td colspan="3" align="center" class="padding-small">',
                         '<label class="asc-about-desc-name">' + this.txtAddress + '</label>',
-                        '<label class="asc-about-desc">' + this.txtAscAddress + '</label>',
+                        '<label class="asc-about-desc"><%= publisheraddr %></label>',
                         '</td>',
                     '</tr>',
                     '<tr>',
                         '<td colspan="3" align="center" class="padding-small">',
                         '<label class="asc-about-desc-name">' + this.txtMail + '</label>',
-                        '<a href="mailto:'+ this.txtAscMail +'">' + this.txtAscMail + '</a>',
+                        '<a href="mailto:<%= supportemail %>"><%= supportemail %></a>',
                         '</td>',
                     '</tr>',
                     '<tr>',
                         '<td colspan="3" align="center" class="padding-small">',
                         '<label class="asc-about-desc-name">' + this.txtTel + '</label>',
-                        '<label class="asc-about-desc">' + this.txtAscTelNum + '</label>',
+                        '<label class="asc-about-desc"><%= phonenum %></label>',
                         '</td>',
                     '</tr>',
                     '<tr>',
                         '<td colspan="3" align="center">',
-                        '<a href="http:\/\/'+ this.txtAscUrl +'" target="_blank">' + this.txtAscUrl + '</a>',
+                        '<a href="<%= publisherurl %>" target="_blank"><% print(publisherurl.replace(/https?:\\/{2}/, "")) %></a>',
                         '</td>',
                     '</tr>',
                 '</table>',
@@ -143,11 +139,11 @@ define([
                         '<td style="width:50%;"><div class="separator horizontal short"/></td>',
                     '</tr>',
                     '<tr>',
-                        '<td colspan="3" align="center" style="padding: 9px 0 10px;"><label class="asc-about-companyname">' + this.txtAscName + '</label></td>',
+                        '<td colspan="3" align="center" style="padding: 9px 0 10px;"><label class="asc-about-companyname"><%= publishername %></label></td>',
                     '</tr>',
                     '<tr>',
                         '<td colspan="3" align="center">',
-                            '<label class="asc-about-desc">' + this.txtAscUrl + '</label>',
+                            '<label class="asc-about-desc"><% print(publisherurl.replace(/https?:\\/{2}/, "")) %></label>',
                         '</td>',
                     '</tr>',
                 '</table>'
@@ -158,6 +154,11 @@ define([
         render: function() {
             var el = $(this.el);
             el.html(this.template({
+                publishername: '{{PUBLISHER_NAME}}',
+                publisheraddr: '{{PUBLISHER_ADDRESS}}',
+                publisherurl: /^(?:https?:\/{2})?(\S+)/.exec('{{PUBLISHER_URL}}')[1],
+                supportemail: '{{SUPPORT_EMAIL}}',
+                phonenum: '{{PUBLISHER_PHONE}}',
                 scope: this
             }));
 
@@ -247,7 +248,6 @@ define([
         txtLicensor: 'LICENSOR',
         txtLicensee: 'LICENSEE',
         txtAddress: 'address: ',
-        txtAscAddress: 'Lubanas st. 125a-25, Riga, Latvia, EU, LV-1021',
         txtMail: 'email: ',
         txtTel: 'tel.: ',
         txtEdition: 'Integration Edition '

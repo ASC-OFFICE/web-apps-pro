@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2018
+ * (c) Copyright Ascensio System SIA 2010-2019
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,8 +13,8 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at Lubanas st. 125a-25, Riga, Latvia,
- * EU, LV-1021.
+ * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
  * of the Program must display Appropriate Legal Notices, as required under
@@ -44,7 +44,7 @@ var ApplicationController = new(function(){
     // Initialize analytics
     // -------------------------
 
-//    Common.Analytics.initialize('UA-12442749-13', 'Embedded ONLYOFFICE Document');
+//    Common.Analytics.initialize('UA-12442749-13', 'Embedded Document Editor');
 
 
     // Check browser
@@ -216,8 +216,6 @@ var ApplicationController = new(function(){
     }
 
     function onDocumentContentReady() {
-        Common.Gateway.documentReady();
-
         hidePreloader();
 
         var zf = (config.customization && config.customization.zoom ? parseInt(config.customization.zoom) : -2);
@@ -320,7 +318,7 @@ var ApplicationController = new(function(){
                 }, 2000);
             }
         });
-
+        Common.Gateway.documentReady();
         Common.Analytics.trackEvent('Load', 'Complete');
     }
 
@@ -396,6 +394,10 @@ var ApplicationController = new(function(){
                 message = me.errorFilePassProtect;
                 break;
 
+            case Asc.c_oAscError.ID.UserDrop:
+                message = me.errorUserDrop;
+                break;
+
             default:
                 message = me.errorDefaultMessage.replace('%1', id);
                 break;
@@ -454,6 +456,10 @@ var ApplicationController = new(function(){
     }
 
     function onDownloadAs() {
+        if ( permissions.download === false) {
+            Common.Gateway.reportError(Asc.c_oAscError.ID.AccessDeny, me.errorAccessDeny);
+            return;
+        }
         if (api) api.asc_DownloadAs(Asc.c_oAscFileType.DOCX, true);
     }
 
@@ -541,6 +547,8 @@ var ApplicationController = new(function(){
         criticalErrorTitle      : 'Error',
         notcriticalErrorTitle   : 'Warning',
         scriptLoadError: 'The connection is too slow, some of the components could not be loaded. Please reload the page.',
-        errorFilePassProtect: 'The file is password protected and cannot be opened.'
+        errorFilePassProtect: 'The file is password protected and cannot be opened.',
+        errorAccessDeny: 'You are trying to perform an action you do not have rights for.<br>Please contact your Document Server administrator.',
+        errorUserDrop: 'The file cannot be accessed right now.'
     }
 })();

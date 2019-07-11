@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2018
+ * (c) Copyright Ascensio System SIA 2010-2019
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,8 +13,8 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at Lubanas st. 125a-25, Riga, Latvia,
- * EU, LV-1021.
+ * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
  * of the Program must display Appropriate Legal Notices, as required under
@@ -74,7 +74,6 @@ define([
             toolbar: '#viewport #toolbar',
             leftMenu: '#viewport #left-menu, #viewport #id-toolbar-full-placeholder-btn-settings, #viewport #id-toolbar-short-placeholder-btn-settings',
             rightMenu: '#viewport #right-menu',
-            header: '#viewport #header',
             statusBar: '#statusbar'
         };
 
@@ -132,7 +131,9 @@ define([
                         'Diagram Title': this.txtDiagramTitle,
                         'X Axis': this.txtXAxis,
                         'Y Axis': this.txtYAxis,
-                        'Your text here': this.txtArt
+                        'Your text here': this.txtArt,
+                        'Table': this.txtTable,
+                        'Print_Area': this.txtPrintArea
                     };
                 styleNames.forEach(function(item){
                     translate[item] = me.translationTable[item] = me['txtStyle_' + item.replace(/ /g, '_')] || item;
@@ -164,10 +165,10 @@ define([
                 this.api.asc_registerCallback('asc_onDocumentName',          _.bind(this.onDocumentName, this));
                 this.api.asc_registerCallback('asc_onPrintUrl',              _.bind(this.onPrintUrl, this));
                 this.api.asc_registerCallback('asc_onMeta',                  _.bind(this.onMeta, this));
-                this.api.asc_registerCallback('asc_onLicenseError',          _.bind(this.onPaidFeatureError, this));
                 Common.NotificationCenter.on('api:disconnect',               _.bind(this.onCoAuthoringDisconnect, this));
                 Common.NotificationCenter.on('goback',                       _.bind(this.goBack, this));
                 Common.NotificationCenter.on('namedrange:locked',            _.bind(this.onNamedRangeLocked, this));
+                Common.NotificationCenter.on('download:cancel',              _.bind(this.onDownloadCancel, this));
 
                 this.stackLongActions = new Common.IrregularStack({
                     strongCompare   : this._compareActionStrong,
@@ -230,6 +231,15 @@ define([
                         event.dataTransfer.dropEffect ="none";
                         return false;
                     }
+                }).on('dragstart', function(e) {
+                    var event = e.originalEvent;
+                    if (event.target ) {
+                        var target = $(event.target);
+                        if (target.closest('.combobox').length>0 || target.closest('.dropdown-menu').length>0 ||
+                            target.closest('.ribtab').length>0 || target.closest('.combo-dataview').length>0) {
+                            event.preventDefault();
+                        }
+                    }
                 });
 
                 Common.NotificationCenter.on({
@@ -276,6 +286,11 @@ define([
                         }, this)
                     }
                 });
+
+                me.defaultTitleText = me.defaultTitleText || '{{APP_TITLE_TEXT}}';
+                me.warnNoLicense  = me.warnNoLicense.replace('%1', '{{COMPANY_NAME}}');
+                me.warnNoLicenseUsers = me.warnNoLicenseUsers.replace('%1', '{{COMPANY_NAME}}');
+                me.textNoLicenseTitle = me.textNoLicenseTitle.replace('%1', '{{COMPANY_NAME}}');
             },
 
             loadConfig: function(data) {
@@ -297,6 +312,8 @@ define([
                 this.appOptions.canAutosave     = false;
                 this.appOptions.canAnalytics    = false;
                 this.appOptions.sharingSettingsUrl = this.editorConfig.sharingSettingsUrl;
+                this.appOptions.saveAsUrl       = this.editorConfig.saveAsUrl;
+                this.appOptions.fileChoiceUrl   = this.editorConfig.fileChoiceUrl;
                 this.appOptions.isEditDiagram   = this.editorConfig.mode == 'editdiagram';
                 this.appOptions.isEditMailMerge = this.editorConfig.mode == 'editmerge';
                 this.appOptions.customization   = this.editorConfig.customization;
@@ -329,6 +346,10 @@ define([
                 }
                 if (value) this.api.asc_setLocalization(value);
 
+                value = Common.localStorage.getBool("sse-settings-r1c1");
+                Common.Utils.InternalSettings.set("sse-settings-r1c1", value);
+                this.api.asc_setR1C1Mode(value);
+
                 if (this.appOptions.location == 'us' || this.appOptions.location == 'ca')
                     Common.Utils.Metric.setDefaultMetric(Common.Utils.Metric.c_MetricUnits.inch);
 
@@ -345,7 +366,9 @@ define([
                     this.permissions = _.extend(this.permissions, data.doc.permissions);
 
                     var _permissions = $.extend({}, data.doc.permissions),
-                        _user = new Asc.asc_CUserInfo();
+                        _options = $.extend({}, data.doc.options, {actions: this.editorConfig.actionLink || {}});
+
+                    var _user = new Asc.asc_CUserInfo();
                     _user.put_Id(this.appOptions.user.id);
                     _user.put_FullName(this.appOptions.user.fullname);
 
@@ -355,7 +378,7 @@ define([
                     docInfo.put_Title(data.doc.title);
                     docInfo.put_Format(data.doc.fileType);
                     docInfo.put_VKey(data.doc.vkey);
-                    docInfo.put_Options(data.doc.options);
+                    docInfo.put_Options(_options);
                     docInfo.put_UserInfo(_user);
                     docInfo.put_CallbackUrl(this.editorConfig.callbackUrl);
                     docInfo.put_Token(data.doc.token);
@@ -386,7 +409,7 @@ define([
                         old_rights = this._state.lostEditingRights;
                     this._state.lostEditingRights = !this._state.lostEditingRights;
                     this.api.asc_coAuthoringDisconnect();
-                    this.getApplication().getController('LeftMenu').leftMenu.getMenu('file').panels['rights'].onLostEditRights();
+                    Common.NotificationCenter.trigger('collaboration:sharingdeny');
                     Common.NotificationCenter.trigger('api:disconnect');
                     if (!old_rights)
                         Common.UI.warning({
@@ -402,13 +425,21 @@ define([
             },
 
             onDownloadAs: function(format) {
+                if ( !this.appOptions.canDownload) {
+                    Common.Gateway.reportError(Asc.c_oAscError.ID.AccessDeny, this.errorAccessDeny);
+                    return;
+                }
+
+                this._state.isFromGatewayDownloadAs = true;
                 var _format = (format && (typeof format == 'string')) ? Asc.c_oAscFileType[ format.toUpperCase() ] : null,
                     _supported = [
                         Asc.c_oAscFileType.XLSX,
                         Asc.c_oAscFileType.ODS,
                         Asc.c_oAscFileType.CSV,
                         Asc.c_oAscFileType.PDF,
-                        Asc.c_oAscFileType.PDFA
+                        Asc.c_oAscFileType.PDFA,
+                        Asc.c_oAscFileType.XLTX,
+                        Asc.c_oAscFileType.OTS
                     ];
 
                 if ( !_format || _supported.indexOf(_format) < 0 )
@@ -430,11 +461,11 @@ define([
                 }
             },
 
-            goBack: function() {
+            goBack: function(current) {
                 var me = this;
                 if ( !Common.Controllers.Desktop.process('goback') ) {
                     var href = me.appOptions.customization.goback.url;
-                    if (me.appOptions.customization.goback.blank!==false) {
+                    if (!current && me.appOptions.customization.goback.blank!==false) {
                         window.open(href, "_blank");
                     } else {
                         parent.location.href = href;
@@ -557,6 +588,10 @@ define([
                         title   = this.savePreparingText;
                         break;
 
+                    case Asc.c_oAscAsyncAction['Waiting']:
+                        title   = this.waitText;
+                        break;
+
                     case ApplyEditRights:
                         title   = this.txtEditingMode;
                         break;
@@ -594,8 +629,6 @@ define([
             onDocumentReady: function() {
                 if (this._isDocReady)
                     return;
-
-                Common.Gateway.documentReady();
 
                 if (this._state.openDlg)
                     this._state.openDlg.close();
@@ -716,9 +749,7 @@ define([
                         if (window.styles_loaded || me.appOptions.isEditDiagram || me.appOptions.isEditMailMerge) {
                             clearInterval(timer_sl);
 
-                            Common.NotificationCenter.trigger('comments:updatefilter',
-                                {property: 'uid',
-                                    value: new RegExp('^(doc_|sheet' + me.api.asc_getActiveWorksheetId() + '_)')});
+                            Common.NotificationCenter.trigger('comments:updatefilter', ['doc', 'sheet' + me.api.asc_getActiveWorksheetId()]);
 
                             documentHolderView.createDelayedElements();
                             toolbarController.createDelayedElements();
@@ -730,6 +761,7 @@ define([
 
                                 me.fillTextArt(me.api.asc_getTextArtPreviews());
                                 me.updateThemeColors();
+                                toolbarController.activateControls();
                             }
 
                             rightmenuController.createDelayedElements();
@@ -780,6 +812,8 @@ define([
                 if (typeof document.hidden !== 'undefined' && document.hidden) {
                     document.addEventListener('visibilitychange', checkWarns);
                 } else checkWarns();
+
+                Common.Gateway.documentReady();
             },
 
             onLicenseChanged: function(params) {
@@ -814,7 +848,6 @@ define([
                     value = (value!==null) ? parseInt(value) : 0;
                     var now = (new Date).getTime();
                     if (now - value > 86400000) {
-                        Common.localStorage.setItem("sse-license-warning", now);
                         Common.UI.info({
                             width: 500,
                             title: this.textNoLicenseTitle,
@@ -822,34 +855,29 @@ define([
                             buttons: buttons,
                             primary: primary,
                             callback: function(btn) {
+                                Common.localStorage.setItem("sse-license-warning", now);
                                 if (btn == 'buynow')
-                                    window.open('https://www.onlyoffice.com', "_blank");
+                                    window.open('{{PUBLISHER_URL}}', "_blank");
                                 else if (btn == 'contact')
-                                    window.open('mailto:sales@onlyoffice.com', "_blank");
+                                    window.open('mailto:{{SALES_EMAIL}}', "_blank");
                             }
                         });
                     }
+                } else
+                // block warning for r7
+                if (false && !this.appOptions.isDesktopApp && !this.appOptions.canBrandingExt &&
+                    this.editorConfig && this.editorConfig.customization && (this.editorConfig.customization.loaderName || this.editorConfig.customization.loaderLogo)) {
+                    Common.UI.warning({
+                        title: this.textPaidFeature,
+                        msg  : this.textCustomLoader,
+                        buttons: [{value: 'contact', caption: this.textContactUs}, {value: 'close', caption: this.textClose}],
+                        primary: 'contact',
+                        callback: function(btn) {
+                            if (btn == 'contact')
+                                window.open('mailto:{{SALES_EMAIL}}', "_blank");
+                        }
+                    });
                 }
-            },
-
-            onPaidFeatureError: function() {
-                var buttons = [], primary,
-                    mail = (this.appOptions.canBranding) ? ((this.editorConfig && this.editorConfig.customization && this.editorConfig.customization.customer) ? this.editorConfig.customization.customer.mail : '') : 'sales@onlyoffice.com';
-                if (mail.length>0) {
-                    buttons.push({value: 'contact', caption: this.textContactUs});
-                    primary = 'contact';
-                }
-                buttons.push({value: 'close', caption: this.textClose});
-                Common.UI.info({
-                    title: this.textPaidFeature,
-                    msg  : this.textLicencePaidFeature,
-                    buttons: buttons,
-                    primary: primary,
-                    callback: function(btn) {
-                        if (btn == 'contact')
-                            window.open('mailto:'+mail, "_blank");
-                    }
-                });
             },
 
             disableEditing: function(disable) {
@@ -864,7 +892,7 @@ define([
                 var elem = document.getElementById('loadmask-text');
                 var proc = (progress.asc_getCurrentFont() + progress.asc_getCurrentImage())/(progress.asc_getFontsCount() + progress.asc_getImagesCount());
                 proc = this.textLoadingDocument + ': ' + Math.min(Math.round(proc*100), 100) + '%';
-                elem ? elem.innerHTML = proc : this.loadMask.setTitle(proc);
+                elem ? elem.innerHTML = proc : this.loadMask && this.loadMask.setTitle(proc);
             },
 
             onEditorPermissions: function(params) {
@@ -897,13 +925,18 @@ define([
                     /** coauthoring end **/
                     this.appOptions.canComments    = this.appOptions.canLicense && (this.permissions.comment===undefined ? (this.permissions.edit !== false) : this.permissions.comment) && (this.editorConfig.mode !== 'view');
                     this.appOptions.canComments    = this.appOptions.canComments && !((typeof (this.editorConfig.customization) == 'object') && this.editorConfig.customization.comments===false);
+                    this.appOptions.canViewComments = this.appOptions.canComments || !((typeof (this.editorConfig.customization) == 'object') && this.editorConfig.customization.comments===false);
                     this.appOptions.canChat        = this.appOptions.canLicense && !this.appOptions.isOffline && !((typeof (this.editorConfig.customization) == 'object') && this.editorConfig.customization.chat===false);
                     this.appOptions.canRename      = this.editorConfig.canRename && !!this.permissions.rename;
                     this.appOptions.trialMode      = params.asc_getLicenseMode();
                     this.appOptions.canModifyFilter = (this.permissions.modifyFilter!==false);
-                    this.appOptions.canBranding  = (licType === Asc.c_oLicenseResult.Success) && (typeof this.editorConfig.customization == 'object');
+                    this.appOptions.canBranding  = params.asc_getCustomization();
                     if (this.appOptions.canBranding)
                         this.headerView.setBranding(this.editorConfig.customization);
+                    else if (typeof this.editorConfig.customization == 'object') {
+                        this.editorConfig.customization.compactHeader = this.editorConfig.customization.toolbarNoTabs =
+                        this.editorConfig.customization.toolbarHideFileName = false;
+                    }
 
                     this.appOptions.canRename && this.headerView.setCanRename(true);
                 } else
@@ -996,19 +1029,17 @@ define([
             },
 
             applyModeEditorElements: function(prevmode) {
-                if (this.appOptions.canComments || this.appOptions.isEdit) {
-                    /** coauthoring begin **/
-                    var commentsController  = this.getApplication().getController('Common.Controllers.Comments');
-                    if (commentsController) {
-                        commentsController.setMode(this.appOptions);
-                        commentsController.setConfig({
-                                config      : this.editorConfig,
-                                sdkviewname : '#ws-canvas-outer',
-                                hintmode    : true},
-                            this.api);
-                    }
-                    /** coauthoring end **/
+                /** coauthoring begin **/
+                var commentsController  = this.getApplication().getController('Common.Controllers.Comments');
+                if (commentsController) {
+                    commentsController.setMode(this.appOptions);
+                    commentsController.setConfig({
+                            config      : this.editorConfig,
+                            sdkviewname : '#ws-canvas-outer',
+                            hintmode    : true},
+                        this.api);
                 }
+                /** coauthoring end **/
 
                 if (this.appOptions.isEdit) {
                     var me = this,
@@ -1050,7 +1081,6 @@ define([
 
                     if (!me.appOptions.isEditMailMerge && !me.appOptions.isEditDiagram) {
                         var options = {};
-                        JSON.parse(Common.localStorage.getItem('sse-hidden-title')) && (options.title = true);
                         JSON.parse(Common.localStorage.getItem('sse-hidden-formula')) && (options.formula = true);
                         application.getController('Toolbar').hideElements(options);
                     } else
@@ -1257,6 +1287,7 @@ define([
                         }
                         this._state.lostEditingRights = true;
                         config.msg = this.errorUserDrop;
+                        Common.NotificationCenter.trigger('collaboration:sharingdeny');
                         break;
 
                     case Asc.c_oAscError.ID.InvalidReferenceOrName:
@@ -1276,7 +1307,7 @@ define([
                         break;
 
                     case Asc.c_oAscError.ID.Warning:
-                        config.msg = this.errorConnectToServer;
+                        config.msg = this.errorConnectToServer.replace('%1', '{{API_URL_EDITING_CALLBACK}}');
                         config.closable = false;
                         break;
 
@@ -1329,6 +1360,26 @@ define([
                         config.msg = this.errorDataEncrypted;
                         break;
 
+                    case Asc.c_oAscError.ID.EditingError:
+                        config.msg = (this.appOptions.isDesktopApp && this.appOptions.isOffline) ? this.errorEditingSaveas : this.errorEditingDownloadas;
+                        break;
+
+                    case Asc.c_oAscError.ID.CannotChangeFormulaArray:
+                        config.msg = this.errorChangeArray;
+                        break;
+
+                    case Asc.c_oAscError.ID.MultiCellsInTablesFormulaArray:
+                        config.msg = this.errorMultiCellFormula;
+                        break;
+
+                    case Asc.c_oAscError.ID.MailToClientMissing:
+                        config.msg = this.errorEmailClient;
+                        break;
+
+                    case Asc.c_oAscError.ID.NoDataToParse:
+                        config.msg = this.errorNoDataToParse;
+                        break;
+
                     default:
                         config.msg = (typeof id == 'string') ? id : this.errorDefaultMessage.replace('%1', id);
                         break;
@@ -1346,7 +1397,7 @@ define([
                         config.msg += '<br/><br/>' + this.criticalErrorExtText;
                         config.callback = function(btn) {
                             if (btn == 'ok') {
-                                Common.NotificationCenter.trigger('goback');
+                                Common.NotificationCenter.trigger('goback', true);
                             }
                         }
                     }
@@ -1364,6 +1415,9 @@ define([
                         if (id == Asc.c_oAscError.ID.Warning && btn == 'ok' && this.appOptions.canDownload) {
                             Common.UI.Menu.Manager.hideAll();
                             (this.appOptions.isDesktopApp && this.appOptions.isOffline) ? this.api.asc_DownloadAs() : this.getApplication().getController('LeftMenu').leftMenu.showMenu('file:saveas');
+                        } else if (id == Asc.c_oAscError.ID.EditingError) {
+                            this.disableEditing(true);
+                            Common.NotificationCenter.trigger('api:disconnect', true); // enable download and print
                         }
                         this._state.lostEditingRights = false;
                         this.onEditComplete();
@@ -1475,7 +1529,7 @@ define([
             onBeforeUnload: function() {
                 Common.localStorage.save();
 
-                var isEdit = this.permissions.edit !== false && this.editorConfig.mode !== 'view' && this.editorConfig.mode !== 'editdiagram';
+                var isEdit = this.permissions.edit !== false && this.editorConfig.mode !== 'view' && this.editorConfig.mode !== 'editdiagram' && this.editorConfig.mode !== 'editmerge';
                 if (isEdit && this.api.asc_isDocumentModified()) {
                     var me = this;
                     this.api.asc_stopSaving();
@@ -1515,7 +1569,13 @@ define([
             },
 
             onDownloadUrl: function(url) {
-                Common.Gateway.downloadAs(url);
+                if (this._state.isFromGatewayDownloadAs)
+                    Common.Gateway.downloadAs(url);
+                this._state.isFromGatewayDownloadAs = false;
+            },
+
+            onDownloadCancel: function() {
+                this._state.isFromGatewayDownloadAs = false;
             },
 
             onUpdateVersion: function(callback) {
@@ -1560,8 +1620,9 @@ define([
                     me = this;
                 if (type == Asc.c_oAscAdvancedOptionsID.CSV) {
                     me._state.openDlg = new Common.Views.OpenDialog({
-                        mode: mode,
-                        type: type,
+                        title: Common.Views.OpenDialog.prototype.txtTitle.replace('%1', 'CSV'),
+                        closable: (mode==2), // if save settings
+                        type: Common.Utils.importTextType.CSV,
                         preview: advOptions.asc_getOptions().asc_getData(),
                         codepages: advOptions.asc_getOptions().asc_getCodePages(),
                         settings: advOptions.asc_getOptions().asc_getRecommendedSettings(),
@@ -1579,8 +1640,9 @@ define([
                     });
                 } else if (type == Asc.c_oAscAdvancedOptionsID.DRM) {
                     me._state.openDlg = new Common.Views.OpenDialog({
-                        closable: me.appOptions.canRequestClose,
-                        type: type,
+                        title: Common.Views.OpenDialog.prototype.txtTitleProtected,
+                        closeFile: me.appOptions.canRequestClose,
+                        type: Common.Utils.importTextType.DRM,
                         warning: !(me.appOptions.isDesktopApp && me.appOptions.isOffline),
                         validatePwd: !!me._state.isDRM,
                         handler: function (result, value) {
@@ -1590,8 +1652,10 @@ define([
                                     me.api.asc_setAdvancedOptions(type, new Asc.asc_CDRMAdvancedOptions(value));
                                     me.loadMask && me.loadMask.show();
                                 }
-                            } else
+                            } else {
                                 Common.Gateway.requestClose();
+                                Common.Controllers.Desktop.requestClose();
+                            }
                             me._state.openDlg = null;
                         }
                     });
@@ -1609,14 +1673,8 @@ define([
                 if (!this.appOptions.isEditMailMerge && !this.appOptions.isEditDiagram && window.editor_elements_prepared) {
                     this.application.getController('Statusbar').selectTab(index);
 
-                    if (this.appOptions.isEdit && !this.dontCloseDummyComment) {
-                        Common.NotificationCenter.trigger('comments:updatefilter',
-                            {
-                                property: 'uid',
-                                value: new RegExp('^(doc_|sheet' + this.api.asc_getWorksheetId(index) + '_)')
-                            },
-                            false //  hide popover
-                        );
+                    if (this.appOptions.canViewComments && !this.dontCloseDummyComment) {
+                        Common.NotificationCenter.trigger('comments:updatefilter', ['doc', 'sheet' + this.api.asc_getWorksheetId(index)], false ); //  hide popover
                     }
                 }
             },
@@ -1693,7 +1751,7 @@ define([
                         store.add({
                             imageUrl : shape.Image,
                             data     : {shapeType: shape.Type},
-                            tip      : me.textShape + ' ' + (idx+1),
+                            tip      : me['txtShape_' + shape.Type] || (me.textShape + ' ' + (idx+1)),
                             allowSelected : true,
                             selected: false
                         });
@@ -1772,8 +1830,10 @@ define([
                     case 'setMergeData':    this.setMergeData(data.data); break;
                     case 'getMergeData':    this.getMergeData(); break;
                     case 'setAppDisabled':
-                        if (this.isAppDisabled===undefined && !data.data) // first editor opening
+                        if (this.isAppDisabled===undefined && !data.data) { // first editor opening
                             Common.NotificationCenter.trigger('layout:changed', 'main');
+                            this.loadMask && this.loadMask.isVisible() && this.loadMask.updatePosition();
+                        }
                         this.isAppDisabled = data.data;
                         break;
                     case 'queryClose':
@@ -2025,7 +2085,8 @@ define([
                 var pluginStore = this.getApplication().getCollection('Common.Collections.Plugins'),
                     isEdit = this.appOptions.isEdit;
                 if (plugins) {
-                    var arr = [], arrUI = [];
+                    var arr = [], arrUI = [],
+                        lang = this.appOptions.lang.split(/[\-\_]/)[0];
                     plugins.pluginsData.forEach(function(item){
                         if (_.find(arr, function(arritem) {
                                 return (arritem.get('baseUrl') == item.baseUrl || arritem.get('guid') == item.guid);
@@ -2035,27 +2096,42 @@ define([
                         var variationsArr = [],
                             pluginVisible = false;
                         item.variations.forEach(function(itemVar){
-                            var visible = (isEdit || itemVar.isViewer) && _.contains(itemVar.EditorsSupport, 'cell');
+                            var visible = (isEdit || itemVar.isViewer && (itemVar.isDisplayedInViewer!==false)) && _.contains(itemVar.EditorsSupport, 'cell') && !itemVar.isSystem;
                             if ( visible ) pluginVisible = true;
 
                             if ( item.isUICustomizer ) {
                                 visible && arrUI.push(item.baseUrl + itemVar.url);
                             } else {
                                 var model = new Common.Models.PluginVariation(itemVar);
+                                var description = itemVar.description;
+                                if (typeof itemVar.descriptionLocale == 'object')
+                                    description = itemVar.descriptionLocale[lang] || itemVar.descriptionLocale['en'] || description || '';
+
+                                _.each(itemVar.buttons, function(b, index){
+                                    if (typeof b.textLocale == 'object')
+                                        b.text = b.textLocale[lang] || b.textLocale['en'] || b.text || '';
+                                    b.visible = (isEdit || b.isViewer !== false);
+                                });
 
                                 model.set({
+                                    description: description,
                                     index: variationsArr.length,
                                     url: itemVar.url,
                                     icons: itemVar.icons,
+                                    buttons: itemVar.buttons,
                                     visible: visible
                                 });
 
                                 variationsArr.push(model);
                             }
                         });
-                        if (variationsArr.length>0 && !item.isUICustomizer)
+                        if (variationsArr.length>0 && !item.isUICustomizer) {
+                            var name = item.name;
+                            if (typeof item.nameLocale == 'object')
+                                name = item.nameLocale[lang] || item.nameLocale['en'] || name || '';
+
                             arr.push(new Common.Models.Plugin({
-                                name : item.name,
+                                name : name,
                                 guid: item.guid,
                                 baseUrl : item.baseUrl,
                                 variations: variationsArr,
@@ -2064,6 +2140,7 @@ define([
                                 groupName: (item.group) ? item.group.name : '',
                                 groupRank: (item.group) ? item.group.rank : 0
                             }));
+                        }
                     });
 
                     if (uiCustomize!==false)  // from ui customizer in editor config or desktop event
@@ -2100,7 +2177,7 @@ define([
             criticalErrorTitle: 'Error',
             notcriticalErrorTitle: 'Warning',
             errorDefaultMessage: 'Error code: %1',
-            criticalErrorExtText: 'Press "Ok" to to back to document list.',
+            criticalErrorExtText: 'Press "OK" to to back to document list.',
             openTitleText: 'Opening Document',
             openTextText: 'Opening document...',
             saveTitleText: 'Saving Document',
@@ -2129,7 +2206,7 @@ define([
             unknownErrorText: 'Unknown error.',
             convertationTimeoutText: 'Convertation timeout exceeded.',
             downloadErrorText: 'Download failed.',
-            unsupportedBrowserErrorText : 'Your browser is not supported.',
+            unsupportedBrowserErrorText: 'Your browser is not supported.',
             requestEditFailedTitleText: 'Access denied',
             requestEditFailedMessageText: 'Someone is editing this document right now. Please try again later.',
             warnBrowserZoom: 'Your browser\'s current zoom setting is not fully supported. Please reset to the default zoom by pressing Ctrl+0.',
@@ -2190,21 +2267,20 @@ define([
             textShape: 'Shape',
             errorFillRange: 'Could not fill the selected range of cells.<br>All the merged cells need to be the same size.',
             errorUpdateVersion: 'The file version has been changed. The page will be reloaded.',
-            defaultTitleText: 'ONLYOFFICE Spreadsheet Editor',
             errorUserDrop: 'The file cannot be accessed right now.',
             txtArt: 'Your text here',
             errorInvalidRef: 'Enter a correct name for the selection or a valid reference to go to.',
             errorCreateDefName: 'The existing named ranges cannot be edited and the new ones cannot be created<br>at the moment as some of them are being edited.',
             errorPasteMaxRange: 'The copy and paste area does not match. Please select an area with the same size or click the first cell in a row to paste the copied cells.',
             errorConnectToServer: ' The document could not be saved. Please check connection settings or contact your administrator.<br>When you click the \'OK\' button, you will be prompted to download the document.<br><br>' +
-                                  'Find more information about connecting Document Server <a href=\"https://api.onlyoffice.com/editors/callback\" target=\"_blank\">here</a>',
+                                  'Find more information about connecting Document Server <a href=\"%1\" target=\"_blank\">here</a>',
             errorLockedWorksheetRename: 'The sheet cannot be renamed at the moment as it is being renamed by another user',
             textTryUndoRedo: 'The Undo/Redo functions are disabled for the Fast co-editing mode.<br>Click the \'Strict mode\' button to switch to the Strict co-editing mode to edit the file without other users interference and send your changes only after you save them. You can switch between the co-editing modes using the editor Advanced settings.',
             textStrict: 'Strict mode',
             errorOpenWarning: 'The length of one of the formulas in the file exceeded<br>the allowed number of characters and it was removed.',
             errorFrmlWrongReferences: 'The function refers to a sheet that does not exist.<br>Please check the data and try again.',
             textBuyNow: 'Visit website',
-            textNoLicenseTitle: 'ONLYOFFICE open source version',
+            textNoLicenseTitle: '%1 open source version',
             textContactUs: 'Contact sales',
             confirmPutMergeRange: 'The source data contains merged cells.<br>They will be unmerged before they are pasted into the table.',
             errorViewerDisconnect: 'Connection is lost. You can still view the document,<br>but will not be able to download or print until the connection is restored.',
@@ -2247,15 +2323,195 @@ define([
             txtStyle_Comma: 'Comma',
             errorForceSave: "An error occurred while saving the file. Please use the 'Download as' option to save the file to your computer hard drive or try again later.",
             errorMaxPoints: "The maximum number of points in series per chart is 4096.",
-            warnNoLicense: 'This version of ONLYOFFICE Editors has certain limitations for concurrent connections to the document server.<br>If you need more please consider purchasing a commercial license.',
-            warnNoLicenseUsers: 'This version of ONLYOFFICE Editors has certain limitations for concurrent users.<br>If you need more please consider purchasing a commercial license.',
+            warnNoLicense: 'This version of %1 editors has certain limitations for concurrent connections to the document server.<br>If you need more please consider purchasing a commercial license.',
+            warnNoLicenseUsers: 'This version of %1 Editors has certain limitations for concurrent users.<br>If you need more please consider purchasing a commercial license.',
             warnLicenseExceeded: 'The number of concurrent connections to the document server has been exceeded and the document will be opened for viewing only.<br>Please contact your administrator for more information.',
             warnLicenseUsersExceeded: 'The number of concurrent users has been exceeded and the document will be opened for viewing only.<br>Please contact your administrator for more information.',
             errorDataEncrypted: 'Encrypted changes have been received, they cannot be deciphered.',
             textClose: 'Close',
             textPaidFeature: 'Paid feature',
-            textLicencePaidFeature: 'The feature you are trying to use is available for additional payment.<br>If you need it, please contact Sales Department',
-            scriptLoadError: 'The connection is too slow, some of the components could not be loaded. Please reload the page.'
+            scriptLoadError: 'The connection is too slow, some of the components could not be loaded. Please reload the page.',
+            errorEditingSaveas: 'An error occurred during the work with the document.<br>Use the \'Save as...\' option to save the file backup copy to your computer hard drive.',
+            errorEditingDownloadas: 'An error occurred during the work with the document.<br>Use the \'Download as...\' option to save the file backup copy to your computer hard drive.',
+            txtShape_textRect: 'Text Box',
+            txtShape_rect: 'Rectangle',
+            txtShape_ellipse: 'Ellipse',
+            txtShape_triangle: 'Triangle',
+            txtShape_rtTriangle: 'Right Triangle',
+            txtShape_parallelogram: 'Parallelogram',
+            txtShape_trapezoid: 'Trapezoid',
+            txtShape_diamond: 'Diamond',
+            txtShape_pentagon: 'Pentagon',
+            txtShape_hexagon: 'Hexagon',
+            txtShape_heptagon: 'Heptagon',
+            txtShape_octagon: 'Octagon',
+            txtShape_decagon: 'Decagon',
+            txtShape_dodecagon: 'Dodecagon',
+            txtShape_pie: 'Pie',
+            txtShape_chord: 'Chord',
+            txtShape_teardrop: 'Teardrop',
+            txtShape_frame: 'Frame',
+            txtShape_halfFrame: 'Half Frame',
+            txtShape_corner: 'Corner',
+            txtShape_diagStripe: 'Diagonal Stripe',
+            txtShape_plus: 'Plus',
+            txtShape_plaque: 'Sign',
+            txtShape_can: 'Can',
+            txtShape_cube: 'Cube',
+            txtShape_bevel: 'Bevel',
+            txtShape_donut: 'Donut',
+            txtShape_noSmoking: '"No" Symbol',
+            txtShape_blockArc: 'Block Arc',
+            txtShape_foldedCorner: 'Folded Corner',
+            txtShape_smileyFace: 'Smiley Face',
+            txtShape_heart: 'Heart',
+            txtShape_lightningBolt: 'Lightning Bolt',
+            txtShape_sun: 'Sun',
+            txtShape_moon: 'Moon',
+            txtShape_cloud: 'Cloud',
+            txtShape_arc: 'Arc',
+            txtShape_bracePair: 'Double Brace',
+            txtShape_leftBracket: 'Left Bracket',
+            txtShape_rightBracket: 'Right Bracket',
+            txtShape_leftBrace: 'Left Brace',
+            txtShape_rightBrace: 'Right Brace',
+            txtShape_rightArrow: 'Right Arrow',
+            txtShape_leftArrow: 'Left Arrow',
+            txtShape_upArrow: 'Up Arrow',
+            txtShape_downArrow: 'Down Arrow',
+            txtShape_leftRightArrow: 'Left Right Arrow',
+            txtShape_upDownArrow: 'Up Down Arrow',
+            txtShape_quadArrow: 'Quad Arrow',
+            txtShape_leftRightUpArrow: 'Left Right Up Arrow',
+            txtShape_bentArrow: 'Bent Arrow',
+            txtShape_uturnArrow: 'U-Turn Arrow',
+            txtShape_leftUpArrow: 'Left Up Arrow',
+            txtShape_bentUpArrow: 'Bent Up Arrow',
+            txtShape_curvedRightArrow: 'Curved Right Arrow',
+            txtShape_curvedLeftArrow: 'Curved Left Arrow',
+            txtShape_curvedUpArrow: 'Curved Up Arrow',
+            txtShape_curvedDownArrow: 'Curved Down Arrow',
+            txtShape_stripedRightArrow: 'Striped Right Arrow',
+            txtShape_notchedRightArrow: 'Notched Right Arrow',
+            txtShape_homePlate: 'Pentagon',
+            txtShape_chevron: 'Chevron',
+            txtShape_rightArrowCallout: 'Right Arrow Callout',
+            txtShape_downArrowCallout: 'Down Arrow Callout',
+            txtShape_leftArrowCallout: 'Left Arrow Callout',
+            txtShape_upArrowCallout: 'Up Arrow Callout',
+            txtShape_leftRightArrowCallout: 'Left Right Arrow Callout',
+            txtShape_quadArrowCallout: 'Quad Arrow Callout',
+            txtShape_circularArrow: 'Circular Arrow',
+            txtShape_mathPlus: 'Plus',
+            txtShape_mathMinus: 'Minus',
+            txtShape_mathMultiply: 'Multiply',
+            txtShape_mathDivide: 'Division',
+            txtShape_mathEqual: 'Equal',
+            txtShape_mathNotEqual: 'Not Equal',
+            txtShape_flowChartProcess: 'Flowchart: Process',
+            txtShape_flowChartAlternateProcess: 'Flowchart: Alternate Process',
+            txtShape_flowChartDecision: 'Flowchart: Decision',
+            txtShape_flowChartInputOutput: 'Flowchart: Data',
+            txtShape_flowChartPredefinedProcess: 'Flowchart: Predefined Process',
+            txtShape_flowChartInternalStorage: 'Flowchart: Internal Storage',
+            txtShape_flowChartDocument: 'Flowchart: Document',
+            txtShape_flowChartMultidocument: 'Flowchart: Multidocument ',
+            txtShape_flowChartTerminator: 'Flowchart: Terminator',
+            txtShape_flowChartPreparation: 'Flowchart: Preparation',
+            txtShape_flowChartManualInput: 'Flowchart: Manual Input',
+            txtShape_flowChartManualOperation: 'Flowchart: Manual Operation',
+            txtShape_flowChartConnector: 'Flowchart: Connector',
+            txtShape_flowChartOffpageConnector: 'Flowchart: Off-page Connector',
+            txtShape_flowChartPunchedCard: 'Flowchart: Card',
+            txtShape_flowChartPunchedTape: 'Flowchart: Punched Tape',
+            txtShape_flowChartSummingJunction: 'Flowchart: Summing Junction',
+            txtShape_flowChartOr: 'Flowchart: Or',
+            txtShape_flowChartCollate: 'Flowchart: Collate',
+            txtShape_flowChartSort: 'Flowchart: Sort',
+            txtShape_flowChartExtract: 'Flowchart: Extract',
+            txtShape_flowChartMerge: 'Flowchart: Merge',
+            txtShape_flowChartOnlineStorage: 'Flowchart: Stored Data',
+            txtShape_flowChartDelay: 'Flowchart: Delay',
+            txtShape_flowChartMagneticTape: 'Flowchart: Sequential Access Storage',
+            txtShape_flowChartMagneticDisk: 'Flowchart: Magnetic Disk',
+            txtShape_flowChartMagneticDrum: 'Flowchart: Direct Access Storage',
+            txtShape_flowChartDisplay: 'Flowchart: Display',
+            txtShape_irregularSeal1: 'Explosion 1',
+            txtShape_irregularSeal2: 'Explosion 2',
+            txtShape_star4: '4-Point Star',
+            txtShape_star5: '5-Point Star',
+            txtShape_star6: '6-Point Star',
+            txtShape_star7: '7-Point Star',
+            txtShape_star8: '8-Point Star',
+            txtShape_star10: '10-Point Star',
+            txtShape_star12: '12-Point Star',
+            txtShape_star16: '16-Point Star',
+            txtShape_star24: '24-Point Star',
+            txtShape_star32: '32-Point Star',
+            txtShape_ribbon2: 'Up Ribbon',
+            txtShape_ribbon: 'Down Ribbon',
+            txtShape_ellipseRibbon2: 'Curved Up Ribbon',
+            txtShape_ellipseRibbon: 'Curved Down Ribbon',
+            txtShape_verticalScroll: 'Vertical Scroll',
+            txtShape_horizontalScroll: 'Horizontal Scroll',
+            txtShape_wave: 'Wave',
+            txtShape_doubleWave: 'Double Wave',
+            txtShape_wedgeRectCallout: 'Rectangular Callout',
+            txtShape_wedgeRoundRectCallout: 'Rounded Rectangular Callout',
+            txtShape_wedgeEllipseCallout: 'Oval Callout',
+            txtShape_cloudCallout: 'Cloud Callout',
+            txtShape_borderCallout1: 'Line Callout 1',
+            txtShape_borderCallout2: 'Line Callout 2',
+            txtShape_borderCallout3: 'Line Callout 3',
+            txtShape_accentCallout1: 'Line Callout 1 (Accent Bar)',
+            txtShape_accentCallout2: 'Line Callout 2 (Accent Bar)',
+            txtShape_accentCallout3: 'Line Callout 3 (Accent Bar)',
+            txtShape_callout1: 'Line Callout 1 (No Border)',
+            txtShape_callout2: 'Line Callout 2 (No Border)',
+            txtShape_callout3: 'Line Callout 3 (No Border)',
+            txtShape_accentBorderCallout1: 'Line Callout 1 (Border and Accent Bar)',
+            txtShape_accentBorderCallout2: 'Line Callout 2 (Border and Accent Bar)',
+            txtShape_accentBorderCallout3: 'Line Callout 3 (Border and Accent Bar)',
+            txtShape_actionButtonBackPrevious: 'Back or Previous Button',
+            txtShape_actionButtonForwardNext: 'Forward or Next Button',
+            txtShape_actionButtonBeginning: 'Beginning Button',
+            txtShape_actionButtonEnd: 'End Button',
+            txtShape_actionButtonHome: 'Home Button',
+            txtShape_actionButtonInformation: 'Information Button',
+            txtShape_actionButtonReturn: 'Return Button',
+            txtShape_actionButtonMovie: 'Movie Button',
+            txtShape_actionButtonDocument: 'Document Button',
+            txtShape_actionButtonSound: 'Sound Button',
+            txtShape_actionButtonHelp: 'Help Button',
+            txtShape_actionButtonBlank: 'Blank Button',
+            txtShape_roundRect: 'Round Corner Rectangle',
+            txtShape_snip1Rect: 'Snip Single Corner Rectangle',
+            txtShape_snip2SameRect: 'Snip Same Side Corner Rectangle',
+            txtShape_snip2DiagRect: 'Snip Diagonal Corner Rectangle',
+            txtShape_snipRoundRect: 'Snip and Round Single Corner Rectangle',
+            txtShape_round1Rect: 'Round Single Corner Rectangle',
+            txtShape_round2SameRect: 'Round Same Side Corner Rectangle',
+            txtShape_round2DiagRect: 'Round Diagonal Corner Rectangle',
+            txtShape_line: 'Line',
+            txtShape_lineWithArrow: 'Arrow',
+            txtShape_lineWithTwoArrows: 'Double Arrow',
+            txtShape_bentConnector5: 'Elbow Connector',
+            txtShape_bentConnector5WithArrow: 'Elbow Arrow Connector',
+            txtShape_bentConnector5WithTwoArrows: 'Elbow Double-Arrow Connector',
+            txtShape_curvedConnector3: 'Curved Connector',
+            txtShape_curvedConnector3WithArrow: 'Curved Arrow Connector',
+            txtShape_curvedConnector3WithTwoArrows: 'Curved Double-Arrow Connector',
+            txtShape_spline: 'Curve',
+            txtShape_polyline1: 'Scribble',
+            txtShape_polyline2: 'Freeform',
+            errorChangeArray: 'You cannot change part of an array.',
+            errorMultiCellFormula: 'Multi-cell array formulas are not allowed in tables.',
+            errorEmailClient: 'No email client could be found',
+            txtPrintArea: 'Print_Area',
+            txtTable: 'Table',
+            textCustomLoader: 'Please note that according to the terms of the license you are not entitled to change the loader.<br>Please contact our Sales Department to get a quote.',
+            errorNoDataToParse: 'No data was selected to parse.',
+            waitText: 'Please, wait...'
         }
     })(), SSE.Controllers.Main || {}))
 });

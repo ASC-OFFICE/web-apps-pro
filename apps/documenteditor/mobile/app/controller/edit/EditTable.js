@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2018
+ * (c) Copyright Ascensio System SIA 2010-2019
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,8 +13,8 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at Lubanas st. 125a-25, Riga, Latvia,
- * EU, LV-1021.
+ * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
  * of the Program must display Appropriate Legal Notices, as required under
@@ -189,11 +189,24 @@ define([
                 if (_tableObject) {
                     if (pageId == '#edit-table-wrap') {
                         me._initWrappView();
+                        Common.Utils.addScrollIfNeed('.page[data-page=edit-table-wrap]', '.page[data-page=edit-table-wrap] .page-content');
                     } else if (pageId == "#edit-table-style" || pageId == '#edit-table-border-color-view') {
                         me._initStyleView();
+                        
+                        if (pageId == '#edit-table-border-color-view') {
+                            Common.Utils.addScrollIfNeed('.page[data-page=edit-table-border-color]', '.page[data-page=edit-table-border-color] .page-content');
+                        } else {
+                            Common.Utils.addScrollIfNeed('.page[data-page=edit-table-style]', '.page[data-page=edit-table-style] .page-content');
+                        }
+
+                        Common.Utils.addScrollIfNeed('#tab-table-border .list-block', '#tab-table-border .list-block ul');
+                        Common.Utils.addScrollIfNeed('#tab-table-fill .list-block', '#tab-table-fill .list-block ul');
+                        Common.Utils.addScrollIfNeed('#tab-table-style .list-block', '#tab-table-style .list-block ul');
                     } else if (pageId == '#edit-table-options') {
+                        Common.Utils.addScrollIfNeed('.page[data-page=edit-table-wrap]', '.page[data-page=edit-table-wrap] .page-content');
                         me._initTableOptionsView();
                     } else if (pageId == '#edit-table-style-options-view') {
+                        Common.Utils.addScrollIfNeed('.page[data-page=edit-table-style-options]', '.page[data-page=edit-table-style-options] .page-content');
                         me._initStyleOptionsView();
                     }
                 }

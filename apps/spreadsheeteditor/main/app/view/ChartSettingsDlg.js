@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2018
+ * (c) Copyright Ascensio System SIA 2010-2019
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,8 +13,8 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at Lubanas st. 125a-25, Riga, Latvia,
- * EU, LV-1021.
+ * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
  * of the Program must display Appropriate Legal Notices, as required under
@@ -111,27 +111,12 @@ define([    'text!spreadsheeteditor/main/app/template/ChartSettingsDlg.template'
 
             // Layout
 
-            var menuAddAlign = function(menuRoot, left, top) {
-                var self = this;
-                if (!$window.hasClass('notransform')) {
-                    $window.addClass('notransform');
-                    menuRoot.addClass('hidden');
-                    setTimeout(function() {
-                        menuRoot.removeClass('hidden');
-                        menuRoot.css({left: left, top: top});
-                        self.options.additionalAlign = null;
-                    }, 500);
-                } else {
-                    menuRoot.css({left: left, top: top});
-                    self.options.additionalAlign = null;
-                }
-            };
             this.btnChartType = new Common.UI.Button({
                 cls         : 'btn-large-dataview',
                 iconCls     : 'item-chartlist bar-normal',
                 menu        : new Common.UI.Menu({
                     style: 'width: 435px; padding-top: 12px;',
-                    additionalAlign: menuAddAlign,
+                    additionalAlign: this.menuAddAlign,
                     items: [
                         { template: _.template('<div id="id-chart-dlg-menu-type" class="menu-insertchart"  style="margin: 5px 5px 5px 10px;"></div>') }
                     ]
@@ -792,7 +777,7 @@ define([    'text!spreadsheeteditor/main/app/template/ChartSettingsDlg.template'
                 iconCls     : 'item-chartlist spark-column',
                 menu        : new Common.UI.Menu({
                     style: 'width: 200px; padding-top: 12px;',
-                    additionalAlign: menuAddAlign,
+                    additionalAlign: this.menuAddAlign,
                     items: [
                         { template: _.template('<div id="id-spark-dlg-menu-type" class="menu-insertchart"  style="margin: 5px 5px 0 10px;"></div>') }
                     ]

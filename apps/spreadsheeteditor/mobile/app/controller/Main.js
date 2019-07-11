@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2018
+ * (c) Copyright Ascensio System SIA 2010-2019
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,8 +13,8 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at Lubanas st. 125a-25, Riga, Latvia,
- * EU, LV-1021.
+ * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
  * of the Program must display Appropriate Legal Notices, as required under
@@ -188,6 +188,11 @@ define([
                     });
                     Common.Gateway.internalMessage('listenHardBack');
                 }
+
+                me.defaultTitleText = me.defaultTitleText || '{{APP_TITLE_TEXT}}';
+                me.warnNoLicense  = me.warnNoLicense.replace('%1', '{{COMPANY_NAME}}');
+                me.warnNoLicenseUsers = me.warnNoLicenseUsers.replace('%1', '{{COMPANY_NAME}}');
+                me.textNoLicenseTitle = me.textNoLicenseTitle.replace('%1', '{{COMPANY_NAME}}');
             },
 
             loadConfig: function(data) {
@@ -306,12 +311,17 @@ define([
             },
 
             onDownloadAs: function() {
+                if ( !this.appOptions.canDownload) {
+                    Common.Gateway.reportError(Asc.c_oAscError.ID.AccessDeny, this.errorAccessDeny);
+                    return;
+                }
+                this._state.isFromGatewayDownloadAs = true;
                 this.api.asc_DownloadAs(Asc.c_oAscFileType.XLSX, true);
             },
 
-            goBack: function() {
+            goBack: function(current) {
                 var href = this.appOptions.customization.goback.url;
-                if (this.appOptions.customization.goback.blank!==false) {
+                if (!current && this.appOptions.customization.goback.blank!==false) {
                     window.open(href, "_blank");
                 } else {
                     parent.location.href = href;
@@ -433,6 +443,11 @@ define([
                         text    = me.sendMergeText;
                         break;
 
+                    case Asc.c_oAscAsyncAction['Waiting']:
+                        title   = me.waitText;
+                        text    = me.waitText;
+                        break;
+
                     case ApplyEditRights:
                         title   = me.txtEditingMode;
                         text    = me.txtEditingMode;
@@ -466,8 +481,6 @@ define([
                 if (this._isDocReady)
                     return;
 
-                Common.Gateway.documentReady();
-
                 if (this._state.openDlg)
                     uiApp.closeModal(this._state.openDlg);
 
@@ -495,12 +508,8 @@ define([
                 this.isLiveCommenting?this.api.asc_showComments(true):this.api.asc_hideComments();
 
                 if (this.appOptions.isEdit && this.appOptions.canLicense && !this.appOptions.isOffline && this.appOptions.canCoAuthoring) {
-                    value = Common.localStorage.getItem("sse-settings-coauthmode");
-                    if (value===null && Common.localStorage.getItem("sse-settings-autosave")===null &&
-                        this.appOptions.customization && this.appOptions.customization.autosave===false) {
-                        value = 0; // use customization.autosave only when sse-settings-coauthmode and sse-settings-autosave are null
-                    }
-                    this._state.fastCoauth = (value===null || parseInt(value) == 1);
+                    // Force ON fast co-authoring mode
+                    me._state.fastCoauth = true;
                 } else
                     this._state.fastCoauth = false;
                 this.api.asc_SetFastCollaborative(this._state.fastCoauth);
@@ -550,6 +559,7 @@ define([
                 });
 
                 $(document).on('contextmenu', _.bind(me.onContextMenu, me));
+                Common.Gateway.documentReady();
             },
 
             onLicenseChanged: function(params) {
@@ -577,13 +587,13 @@ define([
                                         text: me.textBuyNow,
                                         bold: true,
                                         onClick: function() {
-                                            window.open('https://www.onlyoffice.com', "_blank");
+                                            window.open('{{PUBLISHER_URL}}', "_blank");
                                         }
                                     },
                                     {
                                         text: me.textContactUs,
                                         onClick: function() {
-                                            window.open('mailto:sales@onlyoffice.com', "_blank");
+                                            window.open('mailto:{{SALES_EMAIL}}', "_blank");
                                         }
                                     }];
                     }
@@ -603,8 +613,24 @@ define([
                             buttons: buttons
                         });
                     }
-                } else
+                } else {
+                    if (!me.appOptions.isDesktopApp && !me.appOptions.canBrandingExt &&
+                        me.editorConfig && me.editorConfig.customization && (me.editorConfig.customization.loaderName || me.editorConfig.customization.loaderLogo)) {
+                        uiApp.modal({
+                            title: me.textPaidFeature,
+                            text  : me.textCustomLoader,
+                            buttons: [{
+                                text: me.textContactUs,
+                                bold: true,
+                                onClick: function() {
+                                    window.open('mailto:{{SALES_EMAIL}}', "_blank");
+                                }
+                            },
+                                { text: me.textClose }]
+                        });
+                    }
                     SSE.getController('Toolbar').activateControls();
+                }
             },
 
             onOpenDocument: function(progress) {
@@ -650,7 +676,7 @@ define([
                     me.appOptions.canChat        = me.appOptions.canLicense && !me.appOptions.isOffline && !((typeof (me.editorConfig.customization) == 'object') && me.editorConfig.customization.chat===false);
                     me.appOptions.canRename      = !!me.permissions.rename;
 
-                    me.appOptions.canBranding  = (licType === Asc.c_oLicenseResult.Success) && (typeof me.editorConfig.customization == 'object');
+                    me.appOptions.canBranding  = params.asc_getCustomization();
                     me.appOptions.canBrandingExt = params.asc_getCanBranding() && (typeof me.editorConfig.customization == 'object');
                 }
 
@@ -726,7 +752,7 @@ define([
                 if (msg && msg.msg) {
                     msg.msg = (msg.msg).toString();
                     uiApp.addNotification({
-                        title: 'ONLYOFFICE',
+                        title: uiApp.params.modalTitle,
                         message: [msg.msg.charAt(0).toUpperCase() + msg.msg.substring(1)]
                     });
 
@@ -929,7 +955,7 @@ define([
                         break;
 
                     case Asc.c_oAscError.ID.Warning:
-                        config.msg = this.errorConnectToServer;
+                        config.msg = this.errorConnectToServer.replace('%1', '{{API_URL_EDITING_CALLBACK}}');
                         break;
 
                     case Asc.c_oAscError.ID.LockedWorksheetRename:
@@ -973,6 +999,18 @@ define([
                         config.msg = this.errorDataEncrypted;
                         break;
 
+                    case Asc.c_oAscError.ID.CannotChangeFormulaArray:
+                        config.msg = this.errorChangeArray;
+                        break;
+
+                    case Asc.c_oAscError.ID.EditingError:
+                        config.msg = this.errorEditingDownloadas;
+                        break;
+
+                    case Asc.c_oAscError.ID.MultiCellsInTablesFormulaArray:
+                        config.msg = this.errorMultiCellFormula;
+                        break;
+
                     default:
                         config.msg = this.errorDefaultMessage.replace('%1', id);
                         break;
@@ -990,7 +1028,7 @@ define([
                     if (this.appOptions.canBackToFolder && !this.appOptions.isDesktopApp) {
                         config.msg += '</br></br>' + this.criticalErrorExtText;
                         config.callback = function() {
-                            Common.NotificationCenter.trigger('goback');
+                            Common.NotificationCenter.trigger('goback', true);
                         }
                     }
                     if (id == Asc.c_oAscError.ID.DataEncrypted) {
@@ -1315,7 +1353,7 @@ define([
                 if (!this.appOptions.canPrint) return;
 
                 if (this.api)
-                    this.api.asc_Print(Common.Utils.isChrome || Common.Utils.isSafari || Common.Utils.isOpera); // if isChrome or isSafari or isOpera == true use asc_onPrintUrl event
+                    this.api.asc_Print();
                 Common.component.Analytics.trackEvent('Print');
             },
 
@@ -1357,11 +1395,10 @@ define([
             },
 
             leavePageText: 'You have unsaved changes in this document. Click \'Stay on this Page\' to await the autosave of the document. Click \'Leave this Page\' to discard all the unsaved changes.',
-            defaultTitleText: 'ONLYOFFICE Spreadsheet Editor',
             criticalErrorTitle: 'Error',
             notcriticalErrorTitle: 'Warning',
             errorDefaultMessage: 'Error code: %1',
-            criticalErrorExtText: 'Press "Ok" to back to document list.',
+            criticalErrorExtText: 'Press "OK" to back to document list.',
             openTitleText: 'Opening Document',
             openTextText: 'Opening document...',
             saveTitleText: 'Saving Document',
@@ -1389,7 +1426,7 @@ define([
             unknownErrorText: 'Unknown error.',
             convertationTimeoutText: 'Convertation timeout exceeded.',
             downloadErrorText: 'Download failed.',
-            unsupportedBrowserErrorText : 'Your browser is not supported.',
+            unsupportedBrowserErrorText: 'Your browser is not supported.',
             requestEditFailedTitleText: 'Access denied',
             requestEditFailedMessageText: 'Someone is editing this document right now. Please try again later.',
             textLoadingDocument: 'Loading spreadsheet',
@@ -1437,12 +1474,12 @@ define([
             sendMergeText: 'Sending Merge...',
             txtArt: 'Your text here',
             errorConnectToServer: ' The document could not be saved. Please check connection settings or contact your administrator.<br>When you click the \'OK\' button, you will be prompted to download the document.<br><br>' +
-                'Find more information about connecting Document Server <a href=\"https://api.onlyoffice.com/editors/callback\" target=\"_blank\">here</a>',
+                'Find more information about connecting Document Server <a href=\"%1\" target=\"_blank\">here</a>',
             textTryUndoRedo: 'The Undo/Redo functions are disabled for the Fast co-editing mode.<br>Click the \'Strict mode\' button to switch to the Strict co-editing mode to edit the file without other users interference and send your changes only after you save them. You can switch between the co-editing modes using the editor Advanced settings.',
             textStrict: 'Strict mode',
             txtErrorLoadHistory: 'Loading history failed',
             textBuyNow: 'Visit website',
-            textNoLicenseTitle: 'ONLYOFFICE open source version',
+            textNoLicenseTitle: '%1 open source version',
             textContactUs: 'Contact sales',
             errorViewerDisconnect: 'Connection is lost. You can still view the document,<br>but will not be able to download until the connection is restored.',
             warnLicenseExp: 'Your license has expired.<br>Please update your license and refresh the page.',
@@ -1497,8 +1534,8 @@ define([
             txtStyle_Comma: 'Comma',
             errorMaxPoints: 'The maximum number of points in series per chart is 4096.',
             txtProtected: 'Once you enter the password and open the file, the current password to the file will be reset',
-            warnNoLicense: 'This version of ONLYOFFICE Editors has certain limitations for concurrent connections to the document server.<br>If you need more please consider purchasing a commercial license.',
-            warnNoLicenseUsers: 'This version of ONLYOFFICE Editors has certain limitations for concurrent users.<br>If you need more please consider purchasing a commercial license.',
+            warnNoLicense: 'This version of %1 editors has certain limitations for concurrent connections to the document server.<br>If you need more please consider purchasing a commercial license.',
+            warnNoLicenseUsers: 'This version of %1 editors has certain limitations for concurrent users.<br>If you need more please consider purchasing a commercial license.',
             warnLicenseExceeded: 'The number of concurrent connections to the document server has been exceeded and the document will be opened for viewing only.<br>Please contact your administrator for more information.',
             warnLicenseUsersExceeded: 'The number of concurrent users has been exceeded and the document will be opened for viewing only.<br>Please contact your administrator for more information.',
             errorDataEncrypted: 'Encrypted changes have been received, they cannot be deciphered.',
@@ -1531,7 +1568,13 @@ define([
             errorCopyMultiselectArea: 'This command cannot be used with multiple selections.<br>Select a single range and try again.',
             errorPrintMaxPagesCount: 'Unfortunately, it’s not possible to print more than 1500 pages at once in the current version of the program.<br>This restriction will be eliminated in upcoming releases.',
             closeButtonText: 'Close File',
-            scriptLoadError: 'The connection is too slow, some of the components could not be loaded. Please reload the page.'
+            scriptLoadError: 'The connection is too slow, some of the components could not be loaded. Please reload the page.',
+            errorChangeArray: 'You cannot change part of an array.',
+            errorEditingDownloadas: 'An error occurred during the work with the document.<br>Use the \'Download\' option to save the file backup copy to your computer hard drive.',
+            errorMultiCellFormula: 'Multi-cell array formulas are not allowed in tables.',
+            textPaidFeature: 'Paid feature',
+            textCustomLoader: 'Please note that according to the terms of the license you are not entitled to change the loader.<br>Please contact our Sales Department to get a quote.',
+            waitText: 'Please, wait...'
         }
     })(), SSE.Controllers.Main || {}))
 });
