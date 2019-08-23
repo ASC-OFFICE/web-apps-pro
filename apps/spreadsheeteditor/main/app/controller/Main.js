@@ -318,6 +318,7 @@ define([
                 this.appOptions.createUrl       = this.editorConfig.createUrl;
                 this.appOptions.lang            = this.editorConfig.lang;
                 this.appOptions.location        = (typeof (this.editorConfig.location) == 'string') ? this.editorConfig.location.toLowerCase() : '';
+                this.appOptions.region          = (typeof (this.editorConfig.region) == 'string') ? this.editorConfig.region.toLowerCase() : this.editorConfig.region;
                 this.appOptions.canAutosave     = false;
                 this.appOptions.canAnalytics    = false;
                 this.appOptions.sharingSettingsUrl = this.editorConfig.sharingSettingsUrl;
@@ -343,7 +344,13 @@ define([
                 if (value!==null)
                     this.api.asc_setLocale(parseInt(value));
                 else {
-                    this.api.asc_setLocale((this.editorConfig.lang) ? parseInt(Common.util.LanguageInfo.getLocalLanguageCode(this.editorConfig.lang)) : 0x0409);
+                    value = this.appOptions.region;
+                    value = Common.util.LanguageInfo.getLanguages().hasOwnProperty(value) ? value : Common.util.LanguageInfo.getLocalLanguageCode(value);
+                    if (value!==null)
+                        value = parseInt(value);
+                    else
+                        value = (this.editorConfig.lang) ? parseInt(Common.util.LanguageInfo.getLocalLanguageCode(this.editorConfig.lang)) : 0x0409;
+                    this.api.asc_setLocale(value);
                 }
 
                 value = Common.localStorage.getBool("sse-settings-r1c1");
@@ -1840,7 +1847,10 @@ define([
                 Common.Utils.ThemeColor.setColors(colors, standart_colors);
                 if (window.styles_loaded && !this.appOptions.isEditMailMerge && !this.appOptions.isEditDiagram) {
                     this.updateThemeColors();
-                    this.fillTextArt(this.api.asc_getTextArtPreviews());
+                    var me = this;
+                    setTimeout(function(){
+                        me.fillTextArt(me.api.asc_getTextArtPreviews());
+                    }, 1);
                 }
             },
 

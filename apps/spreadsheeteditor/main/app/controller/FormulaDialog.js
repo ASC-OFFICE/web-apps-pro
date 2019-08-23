@@ -83,9 +83,19 @@ define([
                     'function:apply': this.applyFunction
                 },
                 'Toolbar': {
-                    'function:apply': this.applyFunction
+                    'function:apply': this.applyFunction,
+                    'tab:active': this.onTabActive
                 }
+            }
+        },
+
+        setConfig: function(config) {
+            this.toolbar = config.toolbar;
+            this.formulaTab = this.createView('FormulaTab', {
+                toolbar: this.toolbar.toolbar,
+                formulasGroups: this.formulasGroups
             });
+            return this;
         },
 
         applyFunction: function(func, autocomplete, group) {
@@ -114,7 +124,7 @@ define([
             if (this.formulasGroups && this.api) {
                 Common.Utils.InternalSettings.set("sse-settings-func-last", Common.localStorage.getItem("sse-settings-func-last"));
 
-                this.reloadTranslations(Common.localStorage.getItem("sse-settings-func-locale") || this.appOptions.lang );
+                this.reloadTranslations(Common.localStorage.getItem("sse-settings-func-locale") || this.appOptions.lang, true);
 
                 var me = this;
 
@@ -155,7 +165,7 @@ define([
             this.appOptions.lang = data.config.lang;
         },
 
-        reloadTranslations: function (lang) {
+        reloadTranslations: function (lang, suppressEvent) {
             var me = this;
             lang = (lang || 'en').split(/[\-_]/)[0].toLowerCase();
 
@@ -178,18 +188,18 @@ define([
             }
 
             if (me.langDescJson[lang])
-                me.loadingFormulas(me.langDescJson[lang]);
+                me.loadingFormulas(me.langDescJson[lang], suppressEvent);
             else  {
                 Common.Utils.loadConfig('resources/formula-lang/' + lang + '_desc.json',
                     function (config) {
                         if ( config != 'error' ) {
                             me.langDescJson[lang] = config;
-                            me.loadingFormulas(config);
+                            me.loadingFormulas(config, suppressEvent);
                         } else {
                             Common.Utils.loadConfig('resources/formula-lang/en_desc.json',
                                 function (config) {
                                     me.langDescJson[lang] = (config != 'error') ? config : null;
-                                    me.loadingFormulas(me.langDescJson[lang]);
+                                    me.loadingFormulas(me.langDescJson[lang], suppressEvent);
                                 });
                         }
                     });
@@ -258,7 +268,7 @@ define([
             return functions;
         },
 
-        loadingFormulas: function (descrarr) {
+        loadingFormulas: function (descrarr, suppressEvent) {
             var i = 0, j = 0,
                 ascGroupName,
                 ascFunctions,
@@ -334,7 +344,7 @@ define([
                             allFunctions.push(func);
                         }
 
-                        formulaGroup.set('functions', functions);
+                        formulaGroup.set('functions', _.sortBy(functions, function (model) {return model.get('name'); }));
                         store.push(formulaGroup);
                     }
 
@@ -342,8 +352,29 @@ define([
                        _.sortBy(allFunctions, function (model) {return model.get('name'); }));
                 }
             }
-            this.formulaTab && this.formulaTab.fillFunctions();
+            (!suppressEvent || this._formulasInited) && this.formulaTab && this.formulaTab.fillFunctions();
         },
+        sCategoryAll:                   'All',
+        sCategoryLast10:                '10 last used',
+        sCategoryLogical:               'Logical',
+        sCategoryCube:                  'Cube',
+        sCategoryDatabase:              'Database',
+        sCategoryDateAndTime:           'Date and time',
+        sCategoryEngineering:           'Engineering',
+        sCategoryFinancial:             'Financial',
+        sCategoryInformation:           'Information',
+        sCategoryLookupAndReference:    'Lookup and reference',
+        sCategoryMathematic:            'Math and trigonometry',
+        sCategoryStatistical:           'Statistical',
+        sCategoryTextAndData:           'Text and data'
+
+        onTabActive: function (tab) {
+            if ( tab == 'formula' && !this._formulasInited && this.formulaTab) {
+                this.formulaTab.fillFunctions();
+                this._formulasInited = true;
+            }
+        },
+
         sCategoryAll:                   'All',
         sCategoryLast10:                '10 last used',
         sCategoryLogical:               'Logical',
