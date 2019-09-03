@@ -545,7 +545,7 @@ define([
 
             Common.localStorage.setItem(this.view.appPrefix + "settings-spellcheck", state ? 1 : 0);
             this.api.asc_setSpellCheck(state);
-            Common.Utils.InternalSettings.set("de-settings-spellcheck", state);
+            Common.Utils.InternalSettings.set(this.view.appPrefix + "settings-spellcheck", state);
         },
 
         onReviewViewClick: function(menu, item, e) {
@@ -670,8 +670,14 @@ define([
                     }
                 });
             } else if (config.canViewReview) {
-                config.canViewReview = me.api.asc_HaveRevisionsChanges(true); // check revisions from all users
-                config.canViewReview && me.turnDisplayMode(config.isRestrictedEdit ? 'markup' : Common.localStorage.getItem(me.view.appPrefix + "review-mode") || 'original'); // load display mode only in viewer
+                config.canViewReview = (config.isEdit || me.api.asc_HaveRevisionsChanges(true)); // check revisions from all users
+                if (config.canViewReview) {
+                    var val = Common.localStorage.getItem(me.view.appPrefix + "review-mode");
+                    if (val===null)
+                        val = me.appConfig.customization && /^(original|final|markup)$/i.test(me.appConfig.customization.reviewDisplay) ? me.appConfig.customization.reviewDisplay.toLocaleLowerCase() : 'original';
+                    me.turnDisplayMode((config.isEdit || config.isRestrictedEdit) ? 'markup' : val); // load display mode only in viewer
+                    me.view.turnDisplayMode((config.isEdit || config.isRestrictedEdit) ? 'markup' : val);
+                }
             }
 
             if (me.view && me.view.btnChat) {
