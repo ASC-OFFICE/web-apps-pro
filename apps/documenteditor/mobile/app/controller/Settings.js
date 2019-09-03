@@ -262,7 +262,7 @@ define([
                     $('#settings-print').single('click',                        _.bind(me.onPrint, me));
                     $('#settings-collaboration').single('click',                _.bind(me.clickCollaboration, me));
                     var _stateDisplayMode = DE.getController('Common.Controllers.Collaboration').getDisplayMode();
-                    if(_stateDisplayMode == "Final" || _stateDisplayMode == "Original") {
+                    if(_stateDisplayMode == "final" || _stateDisplayMode == "original") {
                         $('#settings-document').addClass('disabled');
                     }
                     var _userCount = DE.getController('Main').returnUserCount();
@@ -378,7 +378,7 @@ define([
                     value = (value!==null) ? parseInt(value) : Common.Utils.Metric.getDefaultMetric();
                 $unitMeasurement.val([value]);
                 var _stateDisplayMode = DE.getController('Common.Controllers.Collaboration').getDisplayMode();
-                if(_stateDisplayMode == "Final" || _stateDisplayMode == "Original") {
+                if(_stateDisplayMode == "final" || _stateDisplayMode == "original") {
                     $('#settings-no-characters').addClass('disabled');
                     $('#settings-hidden-borders').addClass('disabled');
                 }
@@ -557,10 +557,10 @@ define([
                 if (url.charAt(url.length-1) !== '/') {
                     url += '/';
                 }
-                if (Common.SharedSettings.get('android')) {
-                    url+='mobile-applications/documents/android/index.aspx';
-                } else if (Common.SharedSettings.get('sailfish')) {
+                if (Common.SharedSettings.get('sailfish')) {
                     url+='mobile-applications/documents/sailfish/index.aspx';
+                } else if (Common.SharedSettings.get('android')) {
+                    url+='mobile-applications/documents/android/index.aspx';
                 } else {
                     url+='mobile-applications/documents/index.aspx';
                 }
