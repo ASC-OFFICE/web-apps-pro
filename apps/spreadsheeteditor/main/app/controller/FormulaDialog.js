@@ -86,16 +86,7 @@ define([
                     'function:apply': this.applyFunction,
                     'tab:active': this.onTabActive
                 }
-            }
-        },
-
-        setConfig: function(config) {
-            this.toolbar = config.toolbar;
-            this.formulaTab = this.createView('FormulaTab', {
-                toolbar: this.toolbar.toolbar,
-                formulasGroups: this.formulasGroups
-            });
-            return this;
+            })
         },
 
         applyFunction: function(func, autocomplete, group) {
@@ -354,19 +345,6 @@ define([
             }
             (!suppressEvent || this._formulasInited) && this.formulaTab && this.formulaTab.fillFunctions();
         },
-        sCategoryAll:                   'All',
-        sCategoryLast10:                '10 last used',
-        sCategoryLogical:               'Logical',
-        sCategoryCube:                  'Cube',
-        sCategoryDatabase:              'Database',
-        sCategoryDateAndTime:           'Date and time',
-        sCategoryEngineering:           'Engineering',
-        sCategoryFinancial:             'Financial',
-        sCategoryInformation:           'Information',
-        sCategoryLookupAndReference:    'Lookup and reference',
-        sCategoryMathematic:            'Math and trigonometry',
-        sCategoryStatistical:           'Statistical',
-        sCategoryTextAndData:           'Text and data'
 
         onTabActive: function (tab) {
             if ( tab == 'formula' && !this._formulasInited && this.formulaTab) {
