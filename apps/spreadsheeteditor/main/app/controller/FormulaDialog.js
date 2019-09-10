@@ -89,15 +89,6 @@ define([
             })
         },
 
-        setConfig: function(config) {
-            this.toolbar = config.toolbar;
-            this.formulaTab = this.createView('FormulaTab', {
-                toolbar: this.toolbar.toolbar,
-                formulasGroups: this.formulasGroups
-            });
-            return this;
-        },
-
         applyFunction: function(func, autocomplete, group) {
             if (func) {
                 if (func.origin === 'more') {
@@ -107,6 +98,15 @@ define([
                     !autocomplete && this.updateLast10Formulas(func.origin);
                 }
             }
+        },
+
+        setConfig: function(config) {
+            this.toolbar = config.toolbar;
+            this.formulaTab = this.createView('FormulaTab', {
+                toolbar: this.toolbar.toolbar,
+                formulasGroups: this.formulasGroups
+            });
+            return this;
         },
 
         setApi: function (api) {
